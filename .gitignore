@@ -13,6 +13,9 @@ config.ini
 #PyCharm
 .idea/
 
+# VS Code
+*.vscode/
+
 # Distribution / packaging
 .Python
 build/

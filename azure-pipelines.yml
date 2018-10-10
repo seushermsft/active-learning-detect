@@ -13,10 +13,10 @@ steps:
 
 # Invoke Azure Function
 # Invoke an Azure Function as a part of your pipeline.
-- task: AzureFunction@1
+- task: InvokeRESTAPI@1
   inputs:
-    function: https://oneweekfuncapp.azurewebsites.net
-    key: '2hzGzx5bZqN6uIp8LH4Ua3VysKPk9g1kF2tYrd32wGjJTVNGHeOQZg=='
+    connectionType: connectedServiceName
+    serviceConnection: https://oneweekfuncapp.azurewebsites.net/api/HttpTrigger
     method: 'GET' 
     waitForCompletion: 'true' 
     #successCriteria: # Optional

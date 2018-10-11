@@ -71,4 +71,4 @@ jobs:
   - task: Bash@3
     inputs:
       script: curl -G https://oneweekfuncapp.azurewebsites.net/api/HttpTrigger -d name=oneweek
-      workingDirectory: pwd
+      workingDirectory: $(System.DefaultWorkingDirectory)

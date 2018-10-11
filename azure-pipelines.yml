@@ -71,5 +71,3 @@ jobs:
   - task: Bash@3
     inputs:
       script: curl -G https://oneweekfuncapp.azurewebsites.net/api/HttpTrigger -d name=oneweek
-pool:
-  vmImage: 'Ubuntu 16.04'

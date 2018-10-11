@@ -58,8 +58,6 @@ jobs:
       scriptLocation: 'inlineScript'
       inlineScript:  |
         az storage blob upload --container-name function-releases --name $(Build.BuildNumber)-pyfunction-0.1dev.zip --file dist/pyfunction-0.1dev.zip --account-name oneweekstor --account-key $(secret.AzureStorageKey)
-#        az functionapp config appsettings set -g CSEHack -n csehacklinux --settings WEBSITE_RUN_FROM_ZIP=$(Build.BuildNumber)-pyfunction-0.1dev.zip --account-name csehackstorage --account-key $(secret.AzureStorageKey)
-
 
   - task: AzureCLI@1
     inputs: 
@@ -68,6 +66,7 @@ jobs:
         inlineScript: | 
           #az functionapp config appsettings set -g CSEHack -n csehacklinux --settings WEBSITE_RUN_FROM_ZIP=https://csehackstorage.blob.core.windows.net/function-releases/$(Build.BuildNumber)-pyfunction-0.1dev.zip
           az functionapp config appsettings set -g oneweek -n oneweekfuncapp --settings WEBSITE_RUN_FROM_ZIP=https://oneweekstor.blob.core.windows.net/function-releases/$(Build.BuildNumber)-pyfunction-0.1dev.zip
+  
   - task: Bash@3
     inputs:
       targetType: 'inline'

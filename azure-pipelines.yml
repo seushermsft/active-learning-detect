@@ -26,49 +26,49 @@ jobs:
       versionSpec: '$(python.version)'
       architecture: 'x64'
 
-# This should install all the azure functions deps defined the requirements.txt.
-  - script: python -m pip install --upgrade pip && pip install -r requirements.txt
-    displayName: 'Install dependencies'
+# # This should install all the azure functions deps defined the requirements.txt.
+#   - script: python -m pip install --upgrade pip && pip install -r requirements.txt
+#     displayName: 'Install dependencies'
 
-# We want to make sure that the python syntax is correct. 
-# Hence we run lint test. No point in deploying if incorrect.
-  # - script: |
-  #     python -m pip install flake8
-  #     flake8 .
-  #   displayName: 'Run lint tests'
-#  - script: |
-#      pip install pytest
- #     pytest tests --doctest-modules --junitxml=junit/test-results.xml
-#    displayName: 'pytest'
+# # We want to make sure that the python syntax is correct. 
+# # Hence we run lint test. No point in deploying if incorrect.
+#   # - script: |
+#   #     python -m pip install flake8
+#   #     flake8 .
+#   #   displayName: 'Run lint tests'
+# #  - script: |
+# #      pip install pytest
+#  #     pytest tests --doctest-modules --junitxml=junit/test-results.xml
+# #    displayName: 'pytest'
 
-# This will package up our function in a zip. if we don't specify the format the default is tar gz
-  - script: python setup.py sdist --formats=zip
-    displayName: 'Build sdist'
+# # This will package up our function in a zip. if we don't specify the format the default is tar gz
+#   - script: python setup.py sdist --formats=zip
+#     displayName: 'Build sdist'
 
-# This will retain the build artifact
-  - task: PublishBuildArtifacts@1
-    displayName: 'Publish artifact: dist'
-    inputs:
-      pathtoPublish: 'dist'
-      artifactName: 'dist'
+# # This will retain the build artifact
+#   - task: PublishBuildArtifacts@1
+#     displayName: 'Publish artifact: dist'
+#     inputs:
+#       pathtoPublish: 'dist'
+#       artifactName: 'dist'
 
-  - task: AzureCLI@1
-    inputs:
-      azureSubscription: connectionmihaela
-      scriptLocation: 'inlineScript'
-      inlineScript:  |
-        az storage blob upload --container-name function-releases --name $(Build.BuildNumber)-pyfunction-0.1dev.zip --file dist/pyfunction-0.1dev.zip --account-name oneweekstor --account-key $(secret.AzureStorageKey)
-#        az functionapp config appsettings set -g CSEHack -n csehacklinux --settings WEBSITE_RUN_FROM_ZIP=$(Build.BuildNumber)-pyfunction-0.1dev.zip --account-name csehackstorage --account-key $(secret.AzureStorageKey)
+#   - task: AzureCLI@1
+#     inputs:
+#       azureSubscription: connectionmihaela
+#       scriptLocation: 'inlineScript'
+#       inlineScript:  |
+#         az storage blob upload --container-name function-releases --name $(Build.BuildNumber)-pyfunction-0.1dev.zip --file dist/pyfunction-0.1dev.zip --account-name oneweekstor --account-key $(secret.AzureStorageKey)
+# #        az functionapp config appsettings set -g CSEHack -n csehacklinux --settings WEBSITE_RUN_FROM_ZIP=$(Build.BuildNumber)-pyfunction-0.1dev.zip --account-name csehackstorage --account-key $(secret.AzureStorageKey)
 
 
-  - task: AzureCLI@1
-    inputs: 
-        azureSubscription: connectionmihaela 
-        scriptLocation: 'inlineScript' 
-        inlineScript: | 
-          #az functionapp config appsettings set -g CSEHack -n csehacklinux --settings WEBSITE_RUN_FROM_ZIP=https://csehackstorage.blob.core.windows.net/function-releases/$(Build.BuildNumber)-pyfunction-0.1dev.zip
-          az functionapp config appsettings set -g oneweek -n oneweekfuncapp --settings WEBSITE_RUN_FROM_ZIP=https://oneweekstor.blob.core.windows.net/function-releases/$(Build.BuildNumber)-pyfunction-0.1dev.zip
+#   - task: AzureCLI@1
+#     inputs: 
+#         azureSubscription: connectionmihaela 
+#         scriptLocation: 'inlineScript' 
+#         inlineScript: | 
+#           #az functionapp config appsettings set -g CSEHack -n csehacklinux --settings WEBSITE_RUN_FROM_ZIP=https://csehackstorage.blob.core.windows.net/function-releases/$(Build.BuildNumber)-pyfunction-0.1dev.zip
+#           az functionapp config appsettings set -g oneweek -n oneweekfuncapp --settings WEBSITE_RUN_FROM_ZIP=https://oneweekstor.blob.core.windows.net/function-releases/$(Build.BuildNumber)-pyfunction-0.1dev.zip
   - task: Bash@3
     inputs:
       script: curl -G https://oneweekfuncapp.azurewebsites.net/api/HttpTrigger -d name=oneweek
-      workingDirectory: $(System.DefaultWorkingDirectory)
+      workingDirectory: $(Agent.BuildDirectory)

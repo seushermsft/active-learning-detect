@@ -1,26 +1,21 @@
 import unittest
+
 from operations import (
-    init,
     download,
     upload,
-    abandon,
+    read_config_with_parsed_config,
     MissingConfigException,
     ImageLimitException,
     DEFAULT_NUM_IMAGES,
     LOWER_LIMIT,
-    UPPER_LIMIT
+    UPPER_LIMIT,
+    CONFIG_SECTION,
+    FUNCTIONS_KEY,
+    FUNCTIONS_URL
 )
 
 
 class TestCLIOperations(unittest.TestCase):
-    def test_init(self):
-        with self.assertRaises(NotImplementedError):
-            init("fakeconfig")
-
-    def test_init_missing_config(self):
-        with self.assertRaises(MissingConfigException):
-            init(None)
-
     def test_download_under_limit(self):
         with self.assertRaises(ImageLimitException):
             download(LOWER_LIMIT)
@@ -41,9 +36,25 @@ class TestCLIOperations(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             upload()
 
-    def test_abandon(self):
-        with self.assertRaises(NotImplementedError):
-            abandon()
+
+class TestConfig(unittest.TestCase):
+    def test_missing_config_section(self):
+        with self.assertRaises(MissingConfigException):
+            read_config_with_parsed_config({})
+
+    def test_missing_config_values(self):
+        with self.assertRaises(MissingConfigException):
+            read_config_with_parsed_config({
+                CONFIG_SECTION: {}
+            })
+
+    def test_acceptable_config(self):
+        read_config_with_parsed_config({
+            CONFIG_SECTION: {
+                FUNCTIONS_KEY: "test",
+                FUNCTIONS_URL: "test"
+            }
+        })
 
 if __name__ == '__main__':
     unittest.main()

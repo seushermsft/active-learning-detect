@@ -1,6 +1,14 @@
+import configparser
+
+CONFIG_SECTION = 'FUNCTIONS'
+FUNCTIONS_KEY = 'FUNCTIONS_KEY'
+FUNCTIONS_URL = 'FUNCTIONS_URL'
+
 DEFAULT_NUM_IMAGES = 40
 LOWER_LIMIT = 0
 UPPER_LIMIT = 100
+
+CONFIG_PATH = "./config.ini"
 
 
 class MissingConfigException(Exception):
@@ -9,13 +17,6 @@ class MissingConfigException(Exception):
 
 class ImageLimitException(Exception):
     pass
-
-
-def init(config):
-    if (config is None):
-        raise MissingConfigException()
-
-    raise NotImplementedError
 
 
 def download(num_images):
@@ -34,5 +35,25 @@ def upload():
     raise NotImplementedError()
 
 
-def abandon():
-    raise NotImplementedError()
+def read_config(config_path):
+    parser = configparser.ConfigParser()
+    parser.read(config_path)
+    return read_config_with_parsed_config(parser)
+
+
+def read_config_with_parsed_config(parser):
+    functions_config_section = parser.get(CONFIG_SECTION)
+
+    if functions_config_section is None:
+        raise MissingConfigException()
+
+    functions_key_value = functions_config_section.get(FUNCTIONS_KEY)
+    functions_url_value = functions_config_section.get(FUNCTIONS_URL)
+
+    if not functions_key_value or not functions_url_value:
+        raise MissingConfigException()
+
+    return {
+        "key": functions_key_value,
+        "url": functions_url_value
+    }

@@ -71,5 +71,5 @@ jobs:
   - task: Bash@3
     inputs:
       targetType: 'inline'
-      script: curl -G https://oneweekfuncapp.azurewebsites.net/api/HttpTrigger -d name=oneweek
+      script: 'curl -G https://oneweekfuncapp.azurewebsites.net/api/HttpTrigger -d name=oneweek'
       workingDirectory: $(Agent.BuildDirectory)

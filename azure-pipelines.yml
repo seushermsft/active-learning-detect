@@ -70,5 +70,6 @@ jobs:
 #           az functionapp config appsettings set -g oneweek -n oneweekfuncapp --settings WEBSITE_RUN_FROM_ZIP=https://oneweekstor.blob.core.windows.net/function-releases/$(Build.BuildNumber)-pyfunction-0.1dev.zip
   - task: Bash@3
     inputs:
+      targetType: 'inline'
       script: curl -G https://oneweekfuncapp.azurewebsites.net/api/HttpTrigger -d name=oneweek
       workingDirectory: $(Agent.BuildDirectory)

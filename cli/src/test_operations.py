@@ -1,7 +1,8 @@
 import unittest
+from unittest.mock import Mock
 
 from operations import (
-    download,
+    _download_bounds,
     upload,
     read_config_with_parsed_config,
     MissingConfigException,
@@ -9,52 +10,100 @@ from operations import (
     DEFAULT_NUM_IMAGES,
     LOWER_LIMIT,
     UPPER_LIMIT,
-    CONFIG_SECTION,
+    FUNCTIONS_SECTION,
     FUNCTIONS_KEY,
-    FUNCTIONS_URL
+    FUNCTIONS_URL,
+    STORAGE_SECTION,
+    STORAGE_KEY,
+    STORAGE_ACCOUNT,
+    STORAGE_CONTAINER
 )
 
 
 class TestCLIOperations(unittest.TestCase):
-    def test_download_under_limit(self):
+    def test_download_bounds_under_limit(self):
         with self.assertRaises(ImageLimitException):
-            download(LOWER_LIMIT)
+            _download_bounds(LOWER_LIMIT)
 
-    def test_download_over_limit(self):
+    def test_download_bounds_over_limit(self):
         with self.assertRaises(ImageLimitException):
-            download(UPPER_LIMIT + 1)
+            _download_bounds(UPPER_LIMIT + 1)
 
-    def test_download_missing_image_count(self):
-        downloaded_image_count = download(None)
+    def test_download_bounds_missing_image_count(self):
+        downloaded_image_count = _download_bounds(None)
         self.assertEqual(DEFAULT_NUM_IMAGES, downloaded_image_count)
 
-    def test_download_with_image_count(self):
-        downloaded_image_count = download(10)
+    def test_download_bounds_with_image_count(self):
+        downloaded_image_count = _download_bounds(10)
         self.assertEqual(10, downloaded_image_count)
-
-    def test_upload(self):
-        with self.assertRaises(NotImplementedError):
-            upload()
 
 
 class TestConfig(unittest.TestCase):
-    def test_missing_config_section(self):
-        with self.assertRaises(MissingConfigException):
-            read_config_with_parsed_config({})
+    def _mock_sections(self, sections, data):
+        def sections_function():
+            return sections
 
-    def test_missing_config_values(self):
+        def data_function(self, name):
+            return data.get(name, None)
+
+        test = Mock()
+        test.sections = sections_function
+        test.__getitem__ = data_function
+
+        return test
+
+    def test_missing_storage_section(self):
         with self.assertRaises(MissingConfigException):
-            read_config_with_parsed_config({
-                CONFIG_SECTION: {}
-            })
+            read_config_with_parsed_config(
+                self._mock_sections([FUNCTIONS_SECTION], {})
+            )
+
+    def test_missing_functions_section(self):
+        with self.assertRaises(MissingConfigException):
+            read_config_with_parsed_config(
+                self._mock_sections([STORAGE_SECTION], {})
+            )
+
+    def test_missing_functions_config_values(self):
+        with self.assertRaises(MissingConfigException):
+            mock_data = self._mock_sections(
+                [FUNCTIONS_SECTION],
+                {}
+            )
+
+            read_config_with_parsed_config(
+                mock_data
+            )
+
+    def test_missing_storage_config_values(self):
+        with self.assertRaises(MissingConfigException):
+            mock_data = self._mock_sections(
+                [STORAGE_SECTION],
+                {}
+            )
+
+            read_config_with_parsed_config(
+                mock_data
+            )
 
     def test_acceptable_config(self):
-        read_config_with_parsed_config({
-            CONFIG_SECTION: {
-                FUNCTIONS_KEY: "test",
-                FUNCTIONS_URL: "test"
+        mock_data = self._mock_sections(
+           [STORAGE_SECTION, FUNCTIONS_SECTION],
+            {
+                STORAGE_SECTION: {
+                    STORAGE_KEY: "test",
+                    STORAGE_ACCOUNT: "test",
+                    STORAGE_CONTAINER: "test",
+                },
+                FUNCTIONS_SECTION: {
+                    FUNCTIONS_KEY: "test",
+                    FUNCTIONS_URL: "test"
+                }
             }
-        })
+        )
+
+        read_config_with_parsed_config(mock_data)
+
 
 if __name__ == '__main__':
     unittest.main()

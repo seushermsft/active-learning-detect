@@ -4,7 +4,9 @@ from operations import (
     download,
     upload,
     LOWER_LIMIT,
-    UPPER_LIMIT
+    UPPER_LIMIT,
+    read_config,
+    CONFIG_PATH
 )
 
 if __name__ == "__main__":
@@ -24,7 +26,9 @@ if __name__ == "__main__":
 
     operation = args.operation
 
+    config = read_config(CONFIG_PATH)
+
     if operation == 'download':
-        download(args.num_images)
+        download(config, args.num_images)
     else:
-        upload()
+        upload(config)

@@ -4,6 +4,7 @@ import time
 import os
 import uuid
 import shutil
+import pathlib
 from azure.storage.blob import BlockBlobService
 
 FUNCTIONS_SECTION = 'FUNCTIONS'
@@ -76,22 +77,25 @@ def download(config, num_images, strategy=None):
 
     print("Received " + str(json_resp["count"]) + " files.")
 
-    file_tree = os.path.expanduser(config.get("tagging_location"))
+    file_tree = pathlib.Path(os.path.expanduser(config.get("tagging_location")))
+    if file_tree.exists():
+        print("Removing existing tag data directory: " + str(file_tree))
 
-    if os.path.exists(file_tree):
-        print("Removing existing tag data directory: " + file_tree)
-        shutil.rmtree(file_tree, ignore_errors=True)
+        shutil.rmtree(str(file_tree), ignore_errors=True)
 
-    os.mkdir(file_tree)
-    download_images(file_tree, json_resp['urls'])
+    data_dir = pathlib.Path(file_tree / "data")
+    data_dir.mkdir(
+        parents=True,
+        exist_ok=True
+    )
 
+    download_images(data_dir, json_resp['urls'])
     print("Downloaded files. Ready to tag!")
-
     return images_to_download
 
 
-def download_images(file_dir, urls):
-    print("Downloading files to " + file_dir)
+def download_images(image_dir, urls):
+    print("Downloading files to " + str(image_dir))
     dummy = urls[0]
 
     for index in range(len(urls)):
@@ -102,9 +106,12 @@ def download_images(file_dir, urls):
         # need to massage it to get the last portion.
 
         file_name = url.split('/')[-1]
-        response = requests.get(dummy)
 
-        with open(file_dir + "/" + file_name, "wb") as file:
+        # todo: change this when we get actual data.
+        response = requests.get(dummy)
+        file_path = pathlib.Path(image_dir / file_name)
+
+        with open(str(file_path), "wb") as file:
             for chunk in response.iter_content(chunk_size=128):
                 file.write(chunk)
             file.close()
@@ -112,16 +119,17 @@ def download_images(file_dir, urls):
 
 def upload(config):
     storage_container = config.get("storage_container")
+    tagging_location = pathlib.Path(config.get("tagging_location"))
     storage_client = get_azure_storage_client(config)
 
     print("Uploading VOTT json file…")
 
-    path_to_file = os.path.abspath("./images/vott.json")
+    vott_json = pathlib.Path(tagging_location / "data.json")
 
     storage_client.create_blob_from_path(
         storage_container,
         str(uuid.uuid4()) + "_vott.json",
-        path_to_file
+        str(vott_json)
     )
 
     print("Done!")

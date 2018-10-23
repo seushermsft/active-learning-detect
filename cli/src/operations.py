@@ -63,11 +63,10 @@ def _download_bounds(num_images):
 
 
 def download(config, num_images, strategy=None):
-    images_to_download = _download_bounds(num_images)
     functions_url = config.get("url")
-
+    images_to_download = _download_bounds(num_images)
     query = {
-        "imageCount": num_images
+        "imageCount": images_to_download
     }
 
     response = requests.get(functions_url, params=query)
@@ -77,12 +76,13 @@ def download(config, num_images, strategy=None):
 
     print("Received " + str(json_resp["count"]) + " files.")
 
-    file_tree = "./test/"
+    file_tree = os.path.expanduser(config.get("tagging_location"))
 
     if os.path.exists(file_tree):
+        print("Removing existing tag data directory: " + file_tree)
         shutil.rmtree(file_tree, ignore_errors=True)
-        os.mkdir(file_tree)
 
+    os.mkdir(file_tree)
     download_images(file_tree, json_resp['urls'])
 
     print("Downloaded files. Ready to tag!")
@@ -91,13 +91,20 @@ def download(config, num_images, strategy=None):
 
 
 def download_images(file_dir, urls):
+    print("Downloading files to " + file_dir)
     dummy = urls[0]
 
     for index in range(len(urls)):
         url = urls[index]
+
+        # file will look something like
+        # https://csehackstorage.blob.core.windows.net/image-to-tag/image4.jpeg
+        # need to massage it to get the last portion.
+
+        file_name = url.split('/')[-1]
         response = requests.get(dummy)
 
-        with open(file_dir + "test" + str(index) + ".jpg", "wb") as file:
+        with open(file_dir + "/" + file_name, "wb") as file:
             for chunk in response.iter_content(chunk_size=128):
                 file.write(chunk)
             file.close()

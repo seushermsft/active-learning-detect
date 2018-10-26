@@ -24,7 +24,7 @@ DEFAULT_NUM_IMAGES = 40
 LOWER_LIMIT = 0
 UPPER_LIMIT = 100
 
-CONFIG_PATH = "./config.ini"
+CONFIG_PATH = os.environ['ALCONFIG']
 
 azure_storage_client = None
 
@@ -38,6 +38,7 @@ class ImageLimitException(Exception):
 
 
 def get_azure_storage_client(config):
+    # Todo: Move away from global client.
     global azure_storage_client
 
     if azure_storage_client is not None:

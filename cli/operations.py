@@ -24,7 +24,7 @@ DEFAULT_NUM_IMAGES = 40
 LOWER_LIMIT = 0
 UPPER_LIMIT = 100
 
-CONFIG_PATH = os.environ['ALCONFIG']
+CONFIG_PATH = os.environ.get('ALCONFIG', None)
 
 azure_storage_client = None
 
@@ -147,6 +147,9 @@ def upload(config):
 
 
 def read_config(config_path):
+    if config_path is None:
+        raise MissingConfigException()
+
     parser = configparser.ConfigParser()
     parser.read(config_path)
     return read_config_with_parsed_config(parser)

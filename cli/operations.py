@@ -149,7 +149,6 @@ def write_vott_data(image_dir, json_resp):
 def prepend_file_paths(image_dir, vott_json):
     # Don't clobber the response.
     modified_json = copy.deepcopy(vott_json)
-
     frames = modified_json["frames"]
 
     # Replace the frame keys with the fully qualified path
@@ -165,25 +164,45 @@ def prepend_file_paths(image_dir, vott_json):
 
 
 def upload(config):
-    # TODO: Should the CLI's upload feature put the vott file
-    # on a blob container?
-    # Or should it read the JSON and write it as a HTTP request?
-
-    storage_container = config.get("storage_container")
+    functions_url = config.get('url')
     tagging_location = pathlib.Path(config.get("tagging_location"))
-    storage_client = get_azure_storage_client(config)
 
     print("Uploading VOTT json file…")
 
     vott_json = pathlib.Path(tagging_location / "data.json")
+    json_data = json.loads(vott_json)
 
-    storage_client.create_blob_from_path(
-        storage_container,
-        str(uuid.uuid4()) + "_vott.json",
-        str(vott_json)
-    )
+    # Munge the vott json file.
+    munged_json = trim_file_paths(json_data)
 
+    response = requests.post(functions_url, json=munged_json)
+    response.raise_for_status()
+
+    json_resp = response.json()
+    print(json_resp)
     print("Done!")
+
+
+def trim_file_paths(json_data):
+    modified_json = copy.deepcopy(json_data)
+
+    munged_frames = modified_json["frames"]
+    visited_frames = modified_json["visitedFrames"]
+
+    for frame_key in munged_frames.keys():
+        frame_name = pathlib.Path(frame_key).name
+        munged_frames[frame_name] = munged_frames.pop(frame_key)
+
+    munged_visited_frames = []
+    for frame_path in visited_frames:
+        munged_visited_frames.append(
+            pathlib.Path(frame_path).name
+        )
+
+    modified_json["frames"] = munged_frames
+    modified_json["visitedFrames"] = munged_visited_frames
+
+    return modified_json
 
 
 def read_config(config_path):

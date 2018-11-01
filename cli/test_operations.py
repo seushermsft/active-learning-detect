@@ -1,4 +1,6 @@
 import unittest
+import json
+import pathlib
 from unittest.mock import Mock
 
 from operations import (
@@ -21,11 +23,13 @@ from operations import (
     TAGGING_LOCATION_KEY,
     functions_config_section,
     storage_config_section,
-    tagging_config_section
+    tagging_config_section,
+    prepend_file_paths
 )
 
 
 class TestCLIOperations(unittest.TestCase):
+
     def test_download_bounds_under_limit(self):
         with self.assertRaises(ImageLimitException):
             _download_bounds(LOWER_LIMIT)
@@ -44,6 +48,7 @@ class TestCLIOperations(unittest.TestCase):
 
 
 class TestConfig(unittest.TestCase):
+
     def _mock_sections(self, sections, data):
         def sections_function():
             return sections
@@ -89,7 +94,7 @@ class TestConfig(unittest.TestCase):
 
     def test_acceptable_config(self):
         mock_data = self._mock_sections(
-           [STORAGE_SECTION, FUNCTIONS_SECTION, TAGGING_SECTION],
+            [STORAGE_SECTION, FUNCTIONS_SECTION, TAGGING_SECTION],
             {
                 STORAGE_SECTION: {
                     STORAGE_KEY: "test",
@@ -107,6 +112,57 @@ class TestConfig(unittest.TestCase):
         )
 
         read_config_with_parsed_config(mock_data)
+
+
+class TestPrependFilepaths(unittest.TestCase):
+    def _mock_json(self):
+        json_str_fixture = """
+        {
+            "frames": {
+                "st1012.png": [
+                    {
+                    }
+                ],
+                "st1013.png": [
+                    {
+                    }
+                ],
+                "st1014.png": [
+                    {
+                    }
+                ]
+            },
+            "visitedFrames": [
+            ]
+        }
+        """
+
+        return json.loads(json_str_fixture)
+
+    def test_correct_number_of_paths(self):
+        json_resp = self._mock_json()
+
+        data_path = pathlib.Path('/data')
+        prepended_json = prepend_file_paths(data_path, json_resp)
+
+        self.assertEqual(3, len(prepended_json['frames']))
+
+    def test_correct_paths(self):
+        json_resp = self._mock_json()
+
+        data_path = pathlib.Path('/data')
+        expected = ['/data/st1012.png', '/data/st1013.png', '/data/st1014.png']
+        prepended_json = prepend_file_paths(data_path, json_resp)
+
+        for key in prepended_json['frames'].keys():
+            self.assertIn(key, expected)
+
+    def test_json_deep_copy(self):
+        json_resp = self._mock_json()
+        data_path = pathlib.Path('/data')
+
+        prepended_json = prepend_file_paths(data_path, json_resp)
+        self.assertNotEqual(id(json_resp), id(prepended_json))
 
 
 if __name__ == '__main__':

@@ -11,10 +11,12 @@ urlList = { "imageUrls": ["http://www.whitneyway.com/Images/15/2017%20Puppies%20
                          "http://allpetcages.com/wp-content/uploads/2017/06/puppy-whelping-box.jpg",
                          "http://78.media.tumblr.com/eea2f882ec08255e40cecaf8ca1d4543/tumblr_nmxjbjIK141qi4ucgo1_500.jpg"] }
 
-response = requests.post(url = functionURL, headers=headers, data = json.dumps(urlList))
+response = requests.post(url = functionURL, headers=headers, json = urlList)
 
 print("Completed cURL POST request.")
 
-postresponse = response.text
+raw_response = response.text
+response_array = raw_response.split(", ")
+response_output = "\n".join(response_array)
 
-print("Response: " + response.text)
+print("Response: " + response_output)

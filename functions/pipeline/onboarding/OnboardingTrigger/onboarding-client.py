@@ -5,10 +5,13 @@ print("\nTest client for CLI Onboarding scenario\n------------------------------
 
 print("Now executing cURL POST request to onboard images...")
 
-functionURL = "http://localhost:7071/api/TestHTTPTrigger"
-urlList = { "imageUrls": ["url1", "url2", "url3"] }
+functionURL = "https://mtarngfunc-test.azurewebsites.net/api/onboarding?code=ezQ4rW/DvaNtm6DlHZ7XQp1Enrtao3WpsW4FFR5V/nFLVb9vq4P7PQ=="
+headers = {"Content-Type": "application/json"}
+urlList = { "imageUrls": ["http://www.whitneyway.com/Images/15/2017%20Puppies%20in%20Easter%20basket%204-16-17_800.JPG",
+                         "http://allpetcages.com/wp-content/uploads/2017/06/puppy-whelping-box.jpg",
+                         "http://78.media.tumblr.com/eea2f882ec08255e40cecaf8ca1d4543/tumblr_nmxjbjIK141qi4ucgo1_500.jpg"] }
 
-response = requests.post(url = functionURL, data = json.dumps(urlList))
+response = requests.post(url = functionURL, headers=headers, data = json.dumps(urlList))
 
 print("Completed cURL POST request.")
 

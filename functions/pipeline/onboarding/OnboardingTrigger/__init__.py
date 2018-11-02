@@ -15,4 +15,4 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         return func.HttpResponse("Unable to decode POST body", status_code=400)
 
     logging.error(req_body)
-    return func.HttpResponse("Got body: " + url_string, status_code=200)
+    return func.HttpResponse("Got body\n\nURL List:\n" + url_string, status_code=200)

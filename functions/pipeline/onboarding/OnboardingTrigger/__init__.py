@@ -30,7 +30,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
 
         # Create ImageInfo object (def in db_access.py)
         # Note: For testing, default image height/width are set to 50x50
-        image = ImageInfo(original_filename, url, 50, 50)
+        image = DB_Access.ImageInfo(original_filename, url, 50, 50)
 
         # Append image object to the list
         image_object_list.append(image)

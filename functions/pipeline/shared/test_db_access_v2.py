@@ -2,10 +2,6 @@ import unittest
 from unittest.mock import patch 
 from unittest.mock import Mock
 
-from db_provider import(
-    DatabaseInfo,
-    DBProvider
-)
 from db_access_v2 import(
     ImageTagDataAccess,
     ArgumentException,

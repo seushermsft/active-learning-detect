@@ -53,18 +53,15 @@ class ImageTagDataAccess(object):
         if not user_name:
             raise ArgumentException("Parameter cannot be an empty string")
         try:
-            conn = self._db_provider.get_connection()
-            try:
-                cursor = conn.cursor()
-                query = "INSERT INTO User_Info (UserName) VALUES (%s) ON CONFLICT (username) DO UPDATE SET username=EXCLUDED.username RETURNING UserId;"
-                cursor.execute(query,(user_name,))
-                user_id = cursor.fetchone()[0]
-                conn.commit()
-            finally: cursor.close()
+            with self._db_provider.get_connection() as conn:
+                with conn.cursor() as cursor:
+                    query = "INSERT INTO User_Info (UserName) VALUES (%s) ON CONFLICT (username) DO UPDATE SET username=EXCLUDED.username RETURNING UserId;"
+                    cursor.execute(query,(user_name,))
+                    user_id = cursor.fetchone()[0]
+                    conn.commit()
         except Exception as e:
             print("An error occured creating a user: {0}".format(e))
             raise
-        finally: conn.close()
         return user_id
 
     def get_new_images(self, number_of_images, user_id):
@@ -73,23 +70,20 @@ class ImageTagDataAccess(object):
 
         selected_images_to_tag = {}
         try:
-            conn = self._db_provider.get_connection()
-            try:
-                cursor = conn.cursor()
-                # TODO: Should we add TagStateId = INCOMPLETE_TAG also for fetching images?
-                query = ("SELECT b.ImageId, b.ImageLocation, a.TagStateId FROM Image_Tagging_State a "
-                        "JOIN Image_Info b ON a.ImageId = b.ImageId WHERE a.TagStateId = 1 order by "
-                        "a.createddtim DESC limit {0}")
-                cursor.execute(query.format(number_of_images))
-                for row in cursor:
-                    print('Image Id: {0} \t\tImage Name: {1} \t\tTag State: {2}'.format(row[0], row[1], row[2]))
-                    selected_images_to_tag[str(row[0])] = str(row[1])
-                self._update_images(selected_images_to_tag,ImageTagState.TAG_IN_PROGRESS, user_id, conn)
-            finally: cursor.close()
+            with self._db_provider.get_connection() as conn:
+                with conn.cursor() as cursor:
+                    # TODO: Should we add TagStateId = INCOMPLETE_TAG also for fetching images?
+                    query = ("SELECT b.ImageId, b.ImageLocation, a.TagStateId FROM Image_Tagging_State a "
+                            "JOIN Image_Info b ON a.ImageId = b.ImageId WHERE a.TagStateId = 1 order by "
+                            "a.createddtim DESC limit {0}")
+                    cursor.execute(query.format(number_of_images))
+                    for row in cursor:
+                        print('Image Id: {0} \t\tImage Name: {1} \t\tTag State: {2}'.format(row[0], row[1], row[2]))
+                        selected_images_to_tag[str(row[0])] = str(row[1])
+                    self._update_images(selected_images_to_tag,ImageTagState.TAG_IN_PROGRESS, user_id, conn)
         except Exception as e:
             print("An errors occured getting images: {0}".format(e))
             raise
-        finally: conn.close()
         return selected_images_to_tag.values()
 
     def add_new_images(self,list_of_image_infos, user_id):
@@ -100,22 +94,19 @@ class ImageTagDataAccess(object):
         url_to_image_id_map = {}
         if(len(list_of_image_infos) > 0):
             try:
-                conn = self._db_provider.get_connection()
-                try:
-                    cursor = conn.cursor()
-                    for img in list(list_of_image_infos):
-                        query = ("INSERT INTO Image_Info (OriginalImageName,ImageLocation,Height,Width,CreatedByUser) "
-                                "VALUES (%s,%s,%s,%s,%s) RETURNING ImageId;")
-                        cursor.execute(query,(img.image_name,img.image_location,img.height,img.width,user_id))
-                        new_img_id = cursor.fetchone()[0]
-                        url_to_image_id_map[img.image_location] = new_img_id
-                    conn.commit()
-                finally: cursor.close()
-                print("Inserted {0} images to the DB".format(len(url_to_image_id_map)))
+                with self._db_provider.get_connection() as conn:
+                    with conn.cursor() as cursor:
+                        for img in list(list_of_image_infos):
+                            query = ("INSERT INTO Image_Info (OriginalImageName,ImageLocation,Height,Width,CreatedByUser) "
+                                    "VALUES (%s,%s,%s,%s,%s) RETURNING ImageId;")
+                            cursor.execute(query,(img.image_name,img.image_location,img.height,img.width,user_id))
+                            new_img_id = cursor.fetchone()[0]
+                            url_to_image_id_map[img.image_location] = new_img_id
+                        conn.commit()
+                        print("Inserted {0} images to the DB".format(len(url_to_image_id_map)))
             except Exception as e:
                 print("An errors occured getting image ids: {0}".format(e))
                 raise
-            finally: conn.close()
         return url_to_image_id_map
 
     def update_incomplete_images(self, list_of_image_ids, user_id):
@@ -140,15 +131,13 @@ class ImageTagDataAccess(object):
 
         try:
             if(len(list_of_image_ids) > 0):
-                cursor = conn.cursor()
-                try:
+                with conn.cursor() as cursor:
                     image_ids_as_strings = [str(i) for i in list_of_image_ids]
                     images_to_update = '{0}'.format(', '.join(image_ids_as_strings))
                     # TODO: find another way to do string subsitution that doesn't break this query
                     query = "UPDATE Image_Tagging_State SET TagStateId = {0}, ModifiedByUser = {2}, ModifiedDtim = now() WHERE ImageId IN ({1})"
                     cursor.execute(query.format(new_image_tag_state,images_to_update,user_id))
                     conn.commit()
-                finally: cursor.close()
             else:
                 print("No images to update")
         except Exception as e:
@@ -161,18 +150,16 @@ class ImageTagDataAccess(object):
 
         if(len(image_id_to_url_map.items())):
             try:
-                conn = self._db_provider.get_connection()
-                try:
-                    cursor = conn.cursor()
-                    for image_id, new_url in image_id_to_url_map.items():
-                        cursor = conn.cursor()
-                        query = "UPDATE Image_Info SET ImageLocation = '{0}', ModifiedDtim = now() WHERE ImageId = {1}"
-                        cursor.execute(query.format(new_url,image_id))
-                        conn.commit()
-                        print("Updated ImageId: {0} to new ImageLocation: {1}".format(image_id,new_url))
-                        self._update_images([image_id],ImageTagState.READY_TO_TAG, user_id,conn)
-                        print("ImageId: {0} to has a new state: {1}".format(image_id,ImageTagState.READY_TO_TAG.name))
-                finally: cursor.close()
+                with self._db_provider.get_connection() as conn:
+                    with conn.cursor() as cursor:
+                        for image_id, new_url in image_id_to_url_map.items():
+                            cursor = conn.cursor()
+                            query = "UPDATE Image_Info SET ImageLocation = '{0}', ModifiedDtim = now() WHERE ImageId = {1}"
+                            cursor.execute(query.format(new_url,image_id))
+                            conn.commit()
+                            print("Updated ImageId: {0} to new ImageLocation: {1}".format(image_id,new_url))
+                            self._update_images([image_id],ImageTagState.READY_TO_TAG, user_id,conn)
+                            print("ImageId: {0} to has a new state: {1}".format(image_id,ImageTagState.READY_TO_TAG.name))
             except Exception as e:
                 print("An errors occured updating image urls: {0}".format(e))
                 raise
@@ -188,32 +175,29 @@ class ImageTagDataAccess(object):
 
         groups_by_image_id = itertools.groupby(list_of_image_tags, key=lambda it:it.image_id)
         try:
-            conn = self._db_provider.get_connection()
-            try:
-                cursor = conn.cursor()
-                for img_id, list_of_tags in groups_by_image_id:
-                    for img_tag in list(list_of_tags):
-                        query = ("with iti AS ( "
-                                "INSERT INTO image_tags (ImageId, X_Min,X_Max,Y_Min,Y_Max,CreatedByUser) "
-                                "VALUES ({0}, {1},{2},{3},{4},{5}) "
-                                "RETURNING ImageTagId), "
-                                "ci AS ( "
-                                    "INSERT INTO classification_info (ClassificationName) "
-                                    "VALUES {6} "
-                                    "ON CONFLICT (ClassificationName) DO UPDATE SET ClassificationName=EXCLUDED.ClassificationName "
-                                    "RETURNING (SELECT iti.ImageTagId FROM iti), ClassificationId) "
-                                "INSERT INTO tags_classification (ImageTagId,ClassificationId) "
-                                "SELECT imagetagid,classificationid from ci;")
-                        classifications = ", ".join("('{0}')".format(name) for name in img_tag.classification_names)
-                        cursor.execute(query.format(img_tag.image_id,img_tag.x_min,img_tag.x_max,img_tag.y_min,img_tag.y_max,user_id,classifications))
-                    self._update_images([img_id],ImageTagState.COMPLETED_TAG,user_id,conn)
-                    conn.commit()
-                print("Updated {0} image tags".format(len(list_of_image_tags)))
-            finally: cursor.close()
+            with self._db_provider.get_connection() as conn:
+                with conn.cursor() as cursor:
+                    for img_id, list_of_tags in groups_by_image_id:
+                        for img_tag in list(list_of_tags):
+                            query = ("with iti AS ( "
+                                    "INSERT INTO image_tags (ImageId, X_Min,X_Max,Y_Min,Y_Max,CreatedByUser) "
+                                    "VALUES ({0}, {1},{2},{3},{4},{5}) "
+                                    "RETURNING ImageTagId), "
+                                    "ci AS ( "
+                                        "INSERT INTO classification_info (ClassificationName) "
+                                        "VALUES {6} "
+                                        "ON CONFLICT (ClassificationName) DO UPDATE SET ClassificationName=EXCLUDED.ClassificationName "
+                                        "RETURNING (SELECT iti.ImageTagId FROM iti), ClassificationId) "
+                                    "INSERT INTO tags_classification (ImageTagId,ClassificationId) "
+                                    "SELECT imagetagid,classificationid from ci;")
+                            classifications = ", ".join("('{0}')".format(name) for name in img_tag.classification_names)
+                            cursor.execute(query.format(img_tag.image_id,img_tag.x_min,img_tag.x_max,img_tag.y_min,img_tag.y_max,user_id,classifications))
+                        self._update_images([img_id],ImageTagState.COMPLETED_TAG,user_id,conn)
+                        conn.commit()
+                    print("Updated {0} image tags".format(len(list_of_image_tags)))
         except Exception as e:
             print("An errors occured updating tagged image: {0}".format(e))
             raise
-        finally: conn.close()
 
 class ArgumentException(Exception):
     pass
@@ -229,7 +213,7 @@ def main():
     #################################################################
 
     #Replace me for testing
-    db_config = DatabaseInfo("","","","")
+    db_config = DatabaseInfo("seusherpostgres.postgres.database.azure.com","seusher","seusher@seusherpostgres","P@ssword1234")
     data_access = ImageTagDataAccess(PostGresProvider(db_config))
     user_id = data_access.create_user(getpass.getuser())
     print("The user id for '{0}' is {1}".format(getpass.getuser(),user_id))

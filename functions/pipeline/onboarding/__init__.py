@@ -13,10 +13,15 @@ from azure.storage.blob import BlockBlobService
 def main(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('Python HTTP trigger function processed a request.')
 
+    user_id = req.params.get('userId')
+
+    if not user_id:
+        return func.HttpResponse("userId query parameter invalid or omitted", status_code=401)
+
     try:
         req_body = req.get_json()
         logging.error(req.get_json())
-        url_list = req_body["imageUrls"]
+        raw_url_list = req_body["imageUrls"]
     except ValueError:
         print("Unable to decode JSON body")
         return func.HttpResponse("Unable to decode POST body", status_code=400)
@@ -27,7 +32,8 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     image_object_list = []
     image_name_list = []
     
-    # TODO: Add check to ensure image URLs sent by client are all unique.
+    # Check to ensure image URLs sent by client are all unique.
+    url_list = set(raw_url_list)
 
     # TODO: Encapsulate this loop in a method
     # TODO: Wrap method in try/catch, send an appropriate http response in the event of an error
@@ -48,10 +54,11 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     logging.info("Connected.")
 
     # Create user id
-    user_id = data_access.create_user("testuser")  # TODO: remove this hardcoding, should be passed in the request.
+    user_id_number = data_access.create_user(user_id)
+    logging.info("User id for {0} is {1}".format(user_id, str(user_id_number)))
 
     # Add new images to the database, and retrieve a dictionary ImageId's mapped to ImageUrl's
-    image_id_url_map = data_access.add_new_images(image_object_list,user_id)
+    image_id_url_map = data_access.add_new_images(image_object_list,user_id_number)
 
     # Print out dictionary for debugging
     logging.info("Image ID and URL map dictionary:")
@@ -96,12 +103,15 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         logging.info("Done.")
 
         # Delete the file from temp storage once it's been copied
+        # Note: The following delete code works.  Commenting out for testing of other functions.
+        '''
         logging.info("Now deleting image " + original_blob_name + " from temp storage container.")
         try:
             blob_service.delete_blob(copy_from_container, original_blob_name)
             print("Blob " + original_blob_name + " has been deleted successfully")
         except:
             print("Blob " + original_blob_name + " deletion failed")
+        '''
 
         # Add image to the list of images to be returned in the response
         permanent_url_list.append(permanent_storage_path)
@@ -109,12 +119,12 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         update_urls_dictionary[image_id] = permanent_storage_path
 
     logging.info("Now updating permanent URLs in the DB...")
-    data_access.update_image_urls(update_urls_dictionary, user_id)
+    data_access.update_image_urls(update_urls_dictionary, user_id_number)
     logging.info("Done.")
 
     # Construct response string of permanent URLs
     permanent_url_string = (", ".join(permanent_url_list))
 
     # Return string containing list of URLs to images in permanent blob storage
-    return func.HttpResponse("The following images should now be added to the DB and exist in permanent blob storage: " 
+    return func.HttpResponse("The following images should now be added to the DB and exist in permanent blob storage: \n" 
         + permanent_url_string, status_code=200)

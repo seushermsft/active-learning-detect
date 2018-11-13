@@ -1,17 +1,14 @@
 import os
 import logging
 import azure.functions as func
-from ..shared import db_access_v2 as DB_Access_V2
-from azure.storage.blob import BlockBlobService, ContentSettings
+
+from ..shared.db_provider import get_postgres_provider
+from ..shared.db_access import ImageTagDataAccess, ImageInfo
+from azure.storage.blob import BlockBlobService
 
 # TODO: User id as param to function - holding off until further discussion
 # regarding whether user ID should be generated/looked up by the CLI or
 # from within this function
-
-default_db_host = ""
-default_db_name = ""
-default_db_user = ""
-default_db_pass = ""
 
 def main(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('Python HTTP trigger function processed a request.')
@@ -41,19 +38,17 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         # Create ImageInfo object (def in db_access.py)
         # Note: For testing, default image height/width are set to 50x50
         # TODO: Figure out where actual height/width need to come from
-        image = DB_Access_V2.ImageInfo(original_filename, url, 50, 50)
+        image = ImageInfo(original_filename, url, 50, 50)
         # Append image object to the list
         image_object_list.append(image)
 
     # TODO: Wrap db access section in try/catch, send an appropriate http response in the event of an error
     logging.info("Now connecting to database...")
-    db_config = DB_Access_V2.DatabaseInfo(os.getenv('DB_HOST', default_db_host), os.getenv('DB_NAME', default_db_name), os.getenv('DB_USER', default_db_user), os.getenv('DB_PASS', default_db_pass))
-    data_access = DB_Access_V2.ImageTagDataAccess(DB_Access_V2.PostGresProvider(db_config))
+    data_access = ImageTagDataAccess(get_postgres_provider())
     logging.info("Connected.")
 
     # Create user id
-    user_id = data_access.create_user(DB_Access_V2.getpass.getuser())
-    logging.info("The user id for '{0}' is {1}".format(DB_Access_V2.getpass.getuser(),user_id))
+    user_id = data_access.create_user("testuser")  # TODO: remove this hardcoding, should be passed in the request.
 
     # Add new images to the database, and retrieve a dictionary ImageId's mapped to ImageUrl's
     image_id_url_map = data_access.add_new_images(image_object_list,user_id)

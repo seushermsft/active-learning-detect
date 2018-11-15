@@ -19,11 +19,18 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         # TODO: Create if check for userId and valid json checks?
         vott_json = req.get_json()
         upload_data = process_vott_json(vott_json)
-        user_id = int(req.params.get('userId'))
-        upload_data['userId'] = user_id
+        user_name = req.params.get('userName')
+
+        if not user_name:
+            return func.HttpResponse(
+                status_code=401,
+                headers={ "content-type": "application/json"},
+                body=json.dumps({"error": "invalid userName given or omitted"})
+            )
 
         # DB configuration
         data_access = ImageTagDataAccess(get_postgres_provider())
+        user_id = data_access.create_user(user_name)
 
         # Update tagged images
         ids_to_tags = upload_data["imageIdToTags"]
@@ -45,9 +52,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         return func.HttpResponse(
             body=json.dumps(upload_data),
             status_code=200,
-            headers={
-                "content-type": "application/json"
-            }
+            headers={ "content-type": "application/json"},
         )
     except Exception as e:
         return func.HttpResponse(

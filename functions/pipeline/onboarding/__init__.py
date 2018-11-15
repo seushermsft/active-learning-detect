@@ -1,5 +1,6 @@
 import os
 import logging
+import json
 import azure.functions as func
 
 from ..shared.db_provider import get_postgres_provider
@@ -13,10 +14,14 @@ from azure.storage.blob import BlockBlobService
 def main(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('Python HTTP trigger function processed a request.')
 
-    user_id = req.params.get('userId')
+    user_name = req.params.get('userName')
 
-    if not user_id:
-        return func.HttpResponse("userId query parameter invalid or omitted", status_code=401)
+    if not user_name:
+        return func.HttpResponse(
+            status_code=401,
+            headers={ "content-type": "application/json"},
+            body=json.dumps({"error": "invalid userName given or omitted"})
+        )
 
     try:
         req_body = req.get_json()
@@ -49,16 +54,11 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         image_object_list.append(image)
 
     # TODO: Wrap db access section in try/catch, send an appropriate http response in the event of an error
-    logging.info("Now connecting to database...")
     data_access = ImageTagDataAccess(get_postgres_provider())
-    logging.info("Connected.")
-
-    # Create user id
-    user_id_number = data_access.create_user(user_id)
-    logging.info("User id for {0} is {1}".format(user_id, str(user_id_number)))
+    user_id = data_access.create_user(user_name)
 
     # Add new images to the database, and retrieve a dictionary ImageId's mapped to ImageUrl's
-    image_id_url_map = data_access.add_new_images(image_object_list,user_id_number)
+    image_id_url_map = data_access.add_new_images(image_object_list,user_id)
 
     # Print out dictionary for debugging
     logging.info("Image ID and URL map dictionary:")
@@ -119,7 +119,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         update_urls_dictionary[image_id] = permanent_storage_path
 
     logging.info("Now updating permanent URLs in the DB...")
-    data_access.update_image_urls(update_urls_dictionary, user_id_number)
+    data_access.update_image_urls(update_urls_dictionary, user_id)
     logging.info("Done.")
 
     # Construct response string of permanent URLs

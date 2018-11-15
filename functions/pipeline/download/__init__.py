@@ -12,17 +12,17 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('Python HTTP trigger function processed a request.')
 
     image_count = int(req.params.get('imageCount'))
-    user_id = int(req.params.get('userId'))
+    user_name = req.params.get('userName')
 
     # setup response object
     headers = {
         "content-type": "application/json"
     }
-    if not user_id:
+    if not user_name:
         return func.HttpResponse(
             status_code=401,
             headers=headers,
-            body=json.dumps({"error": "invalid userId given or omitted"})
+            body=json.dumps({"error": "invalid userName given or omitted"})
         )
     elif not image_count:
         return func.HttpResponse(
@@ -34,7 +34,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         try:
             # DB configuration
             data_access = ImageTagDataAccess(get_postgres_provider())
-
+            user_id = data_access.create_user(user_name)
             image_urls = list(data_access.get_new_images(image_count, user_id))
 
             # TODO: Populate starting json with tags, if any exist... (precomputed or retagging?)

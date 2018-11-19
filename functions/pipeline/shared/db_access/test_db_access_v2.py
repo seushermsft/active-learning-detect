@@ -13,6 +13,8 @@ from .db_access_v2 import(
 #    get_new_images
 )
 
+from contextlib import contextmanager
+
 class MockConnection:
     def _mock_cursor(self):
         self.fetchCount=5
@@ -38,10 +40,16 @@ class MockDBProvider:
     def __init__(self, fail = False):
         self.fail = fail
 
+    @contextmanager
     def get_connection(self):
         if self.fail:
             raise Exception
-        return MockConnection()
+        yield MockConnection()
+
+    @contextmanager
+    def get_cursor(self, conn):
+        cursor = conn.cursor()
+        yield cursor
 
 class TestImageTagDataAccess(unittest.TestCase):
     def test_connection(self):

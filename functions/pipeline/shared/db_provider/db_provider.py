@@ -1,6 +1,9 @@
 import pg8000
 import os
 
+# Import for managing the lifcycle of database objects
+from contextlib import contextmanager
+
 # import pyodbc
 
 # Used for testing
@@ -9,6 +12,7 @@ default_db_name = ""
 default_db_user = ""
 default_db_pass = ""
 
+
 def get_postgres_provider():
     return PostGresProvider(__get_database_info_from_env())
 
@@ -16,7 +20,6 @@ def get_postgres_provider():
 def __get_database_info_from_env():
     return DatabaseInfo(os.getenv('DB_HOST', default_db_host), os.getenv('DB_NAME', default_db_name),
                         os.getenv('DB_USER', default_db_user), os.getenv('DB_PASS', default_db_pass))
-
 
 class DatabaseInfo(object):
     def __init__(self, db_host_name, db_name, db_user_name, db_password):
@@ -31,7 +34,7 @@ class DBProvider(object):
 
     def get_connection(self): pass
 
-    def cursor(self): pass
+    def get_cursor(self): pass
 
     def execute(self, query): pass
 
@@ -45,10 +48,24 @@ class PostGresProvider(DBProvider):
         return pg8000.connect(db_user, host=host_name, unix_sock=None, port=5432, database=db_name, password=db_pass,
                               ssl=True, timeout=None, application_name=None)
 
+    @contextmanager
     def get_connection(self):
-        # self.connection =
-        return self.__new_connection(self.database_info.db_host_name, self.database_info.db_name,
+        conn = self.__new_connection(self.database_info.db_host_name, self.database_info.db_name,
                                      self.database_info.db_user_name, self.database_info.db_password)
+
+        yield conn
+
+        # This will be called when conn leaves a 'with' scope
+        conn.close()
+
+    @contextmanager
+    def get_cursor(self, conn):
+        cursor = conn.cursor()
+
+        yield cursor
+
+        # This will be called when cursor leaves a 'with' scope
+        cursor.close()
 
 
 '''
